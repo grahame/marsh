@@ -57,9 +57,10 @@ To solve today's puzzle using `marsh`, add arguments after each guess on the wor
 Arguments are added in pairs, one for the word guessed, and one for the mark provided
 by wordle, encoded with:
 
-- `g`: yellow tile
+- `g`: green tile
 - `y`: yellow tile
 - `x`: character excluded
+- `-`: no info for tile (not excluded, not green, not yellow)
 
 Note that a black hint tile does not always mean that a character has been excluded. If in
 doubt, check the keyboard at the bottom of the wordle screen.
