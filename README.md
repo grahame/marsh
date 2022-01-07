@@ -29,15 +29,19 @@ Then, extract the wordlist from it:
 python3 extract.py wordle.js words.json
 ```
 
+### calculate mode
+
 To determine the best starting guess:
 
 ```sh
 cargo run --release words.json calculate
 ```
 
-This will take a while to run. The code is written in rust and makes use of rayon for parallelism.
+This will take a short while to run. The code is written in rust and makes use of rayon for parallelism.
 On my laptop, it takes less than ten seconds using all 8 cores.  The output of this command is a
 sorted CSV file, from best initial guess to worst initial guess.
+
+### solver mode
 
 To apply the best guess algorith in solving a hypothetical puzzle:
 
@@ -47,12 +51,34 @@ To apply the best guess algorith in solving a hypothetical puzzle:
 cargo run --release words.json solve flood arose
 ```
 
+### bot mode
+
+To solve today's puzzle using `marsh`, add arguments after each guess on the wordle site.
+Arguments are added in pairs, one for the word guessed, and one for the mark provided
+by wordle, encoded with:
+
+- `g`: yellow tile
+- `y`: yellow tile
+- `x`: character excluded
+
+Note that a black hint tile does not always mean that a character has been excluded. If in
+doubt, check the keyboard at the bottom of the wordle screen.
+
+For example:
+
+```sh
+# enter raise into wordle
+$ cargo run --release words.json bot raise yyxxx
+raise: yxxxx
+-> bot move: acorn
+# enter acorn into wordle, then re-run adding the next two arguments..
+```
+
 ## Results
 
 tl;dr? Here are the best ten initial guesses:
 
 ```csv
-word,average_ratio
 word,average_ratio
 raise,0.026350078602783357
 arise,0.0275271144615128
