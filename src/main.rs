@@ -3,9 +3,10 @@ use std::fs::File;
 use std::env;
 
 enum Mark {
-    Yellow = 1,
-    Green = 2,
-    Excluded = 3,
+    NoScore = 0,
+    Excluded = 1,
+    Yellow = 2,
+    Green = 3,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -76,7 +77,7 @@ fn mark_guess(word: &Word, guess: &Word) -> Score {
 
     // find inexact matches and score them yellow
     for (i, g) in guess.chars.iter().enumerate() {
-        if score.marks[i] != Mark::Excluded as u8 {
+        if score.marks[i] != Mark::NoScore as u8 {
             continue;
         }
         if cf.count[*g as usize] > 0 {
@@ -85,6 +86,36 @@ fn mark_guess(word: &Word, guess: &Word) -> Score {
         }
     }
     score
+}
+
+fn word_valid(word: &Word, guess: &Word, candidate: &Word, ex: &CharCount, score: &Score) -> bool {
+    let mut word_cf = count_word(word);
+    let mut candidate_cf = count_word(candidate);
+    // does the word contain a character that is excluded?
+    for c in candidate.chars.iter() {
+        if ex.count[*c as usize] > 0 {
+            return false;
+        }
+    }
+    // check green letters match
+    for ((w_c, g_c), m) in candidate.chars.iter().zip(guess.chars.iter()).zip(score.marks.iter()) {
+        if *m == Mark::Green as u8 {
+            if *w_c != *g_c {
+                return false;
+            }
+            word_cf.count[*g_c as usize] -= 1;
+        }
+    }
+    // check yellow letters possible
+    for (g_c, m) in guess.chars.iter().zip(score.marks.iter()) {
+        if *m == Mark::Yellow as u8 {
+            if candidate_cf.count[*g_c as usize] == 0 {
+                return false;
+            }
+            candidate_cf.count[*g_c as usize] -= 1;
+        }
+    }
+    true
 }
 
 fn next_words(words: &[Word], word: &Word, guess: &Word) -> Vec<Word> {
@@ -105,47 +136,9 @@ fn next_words(words: &[Word], word: &Word, guess: &Word) -> Vec<Word> {
         if w.chars == guess.chars {
             continue;
         }
-
-        let mut possible = true;
-        let mut cf = count_word(word);
-        // does the word contain a character that is excluded?
-        for c in w.chars.iter() {
-            if ex.count[*c as usize] > 0 {
-                possible = false;
-                break;
-            }
+        if word_valid(word, guess, w, &ex, &score) {
+            res.push(*w);
         }
-        if !possible {
-            continue;
-        }
-        // check green letters match
-        for ((w_c, g_c), m) in w.chars.iter().zip(guess.chars.iter()).zip(score.marks.iter()) {
-            if *m == Mark::Green as u8 {
-                if *w_c != *g_c {
-                    possible = false;
-                    break;
-                }
-                cf.count[*g_c as usize] -= 1;
-            }
-        }
-        if !possible {
-            continue;
-        }
-        // check yellow letters possible
-        for (g_c, m) in guess.chars.iter().zip(score.marks.iter()) {
-            if *m == Mark::Yellow as u8 {
-                if cf.count[*g_c as usize] == 0 {
-                    possible = false;
-                    break;
-                }
-                cf.count[*g_c as usize] -= 1;
-            }
-        }
-        if !possible {
-            continue;
-        }
-
-        res.push(*w);
     }
     res
 }
@@ -156,11 +149,13 @@ fn solve(words: &[Word], word: &Word, guess: &Word) -> (u32, Word) {
     let mut next_guess: Word = *guess;
 
     loop {
-        println!("{}: guess: {}", i, decode_word(&next_guess));
         if next_guess.chars == word.chars {
+            println!("{}:  done {}", i, decode_word(&next_guess));
             break;
         }
+        let l_b = nw.len();
         nw = next_words(&nw, word, &next_guess);
+        println!("{}: guess {} ({} -> {})", i, decode_word(&next_guess), l_b, nw.len());
         next_guess = rankguesses(&nw, &nw)[0].0;
         i += 1;
     }
@@ -198,6 +193,21 @@ fn rankguesses(candidates: &[Word], words: &[Word]) -> Vec<(Word, f64)> {
     }).collect();
     guesses.sort_by(|&(_, r), (_, s)| r.partial_cmp(s).unwrap());
     guesses
+}
+
+fn test() {
+    /*
+    let word = encode_word("crank");
+    let guess = encode_word("raise");
+    let candidate = encode_word("corny");
+
+    let mut ex = CharCount { count: [0; 26] };
+    let score = mark_guess(&word, &guess);
+
+    println!("{:?}", score);
+    println!("{:?}", word_valid(&word, &guess, &candidate, &ex, &score));
+    return;
+    */
 }
 
 fn main() {
