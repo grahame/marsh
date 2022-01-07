@@ -53,16 +53,17 @@ tl;dr? Here are the best ten initial guesses:
 
 ```csv
 word,average_ratio
-raise,0.03770974347970099
-irate,0.038317853794158675
-arise,0.038711940625743575
-arose,0.03946279546016459
-alter,0.03976918304419014
-later,0.03999346920496897
-alert,0.04010150721419608
-stare,0.04029911041241997
-snare,0.04127275865446939
-saner,0.04132239269670485
+word,average_ratio
+raise,0.026350078602783357
+arise,0.0275271144615128
+irate,0.027550252135336916
+arose,0.02851867574136189
+alter,0.030233849110645705
+saner,0.0302916932952062
+later,0.030333863571691932
+snare,0.030711530118627744
+stare,0.030796617048173932
+slate,0.03091678367674437
 ```
 
 So, `raise` is the best first guess, at least at the moment.
@@ -70,7 +71,7 @@ So, `raise` is the best first guess, at least at the moment.
 ... and lucky last, the worst guess:
 
 ```csv
-jumbo,0.45019681017312085
+jumpy,0.25890758458545743
 ```
 
 The worlde word list does seem to change from time to time, so the results above may change.
