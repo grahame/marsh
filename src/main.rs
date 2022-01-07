@@ -70,7 +70,7 @@ fn mark_guess(word: &Word, guess: &Word) -> Score {
     // find exact matches and score them green
     for (i, (g, w)) in guess.chars.iter().zip(word.chars.iter()).enumerate() {
         if g == w {
-           score.marks[i] = Mark::Green as u8;
+            score.marks[i] = Mark::Green as u8;
             cf.count[*g as usize] -= 1;
         }
     }
