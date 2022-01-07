@@ -348,12 +348,6 @@ mod tests {
     }
 }
 
-/*
-fn test() {
-
-}
-*/
-
 fn main() {
     let args: Vec<String> = env::args().collect();
 
