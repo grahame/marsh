@@ -32,7 +32,7 @@ python3 extract.py wordle.js words.json
 To determine the best starting guess:
 
 ```sh
-cargo run --release words.json
+cargo run --release words.json calculate
 ```
 
 This will take a while to run. The code is written in rust and makes use of rayon for parallelism.
@@ -44,7 +44,7 @@ To apply the best guess algorith in solving a hypothetical puzzle:
 ```sh
 # solution: flood
 # starting guess: arose
-cargo run --release words.json flood arose
+cargo run --release words.json solve flood arose
 ```
 
 ## Results

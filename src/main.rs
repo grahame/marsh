@@ -104,10 +104,8 @@ fn word_valid(guess: &Word, candidate: &Word, ex: &CharCount, score: &Score) -> 
             }
             candidate_cf.count[*g_c as usize] -= 1;
         }
-        if *m == Mark::Yellow as u8 {
-            if *w_c == *g_c {
-                return false;
-            }
+        if *m == Mark::Yellow as u8 && *w_c == *g_c {
+            return false;
         }
     }
     // check yellow letters possible
@@ -122,9 +120,7 @@ fn word_valid(guess: &Word, candidate: &Word, ex: &CharCount, score: &Score) -> 
     true
 }
 
-fn next_words(words: &[Word], score: &Score, guess: &Word) -> Vec<Word> {
-    // given a word and a guess, determine our next guess
-    let mut res = Vec::new();
+fn determine_excluded(guess: &Word, score: &Score) -> CharCount {
     let mut ex = CharCount { count: [0; 26] };
 
     // determine excluded characters
@@ -133,13 +129,20 @@ fn next_words(words: &[Word], score: &Score, guess: &Word) -> Vec<Word> {
             ex.count[guess.chars[i] as usize] += 1;
         }
     }
+    ex
+}
+
+fn next_words(words: &[Word], score: &Score, guess: &Word) -> Vec<Word> {
+    // given a word and a guess, determine our next guess
+    let mut res = Vec::new();
+    let ex = determine_excluded(guess, score);
 
     // constrained search for possible next guesses
     for w in words.iter() {
         if w.chars == guess.chars {
             continue;
         }
-        if word_valid(guess, w, &ex, &score) {
+        if word_valid(guess, w, &ex, score) {
             res.push(*w);
         }
     }
@@ -157,7 +160,7 @@ fn solve(words: &[Word], word: &Word, guess: &Word) -> (u32, Word) {
             break;
         }
         let l_b = nw.len();
-        let score = mark_guess(word, guess);
+        let score = mark_guess(word, &next_guess);
         nw = next_words(&nw, &score, &next_guess);
         println!("{}: guess {} ({} -> {})", i, decode_word(&next_guess), l_b, nw.len());
         next_guess = rankguesses(&nw, &nw)[0].0;
@@ -200,7 +203,7 @@ fn rankguesses(candidates: &[Word], words: &[Word]) -> Vec<(Word, f64)> {
     guesses
 }
 
-fn cli_score(guess: &Word, hint: &String) -> Score {
+fn cli_score(hint: &str) -> Score {
     let mut score = Score {
         marks: [0; 5],
     };
@@ -214,7 +217,7 @@ fn cli_score(guess: &Word, hint: &String) -> Score {
         } else if c == '-' {
             score.marks[i] = Mark::NoScore as u8;
         } else {
-            assert!(0 == 1);
+            panic!("invalid input character");
         }
     }
     score
@@ -226,7 +229,7 @@ fn run_bot(words: &[Word], args: &[String]) {
     while i + 1 < args.len() {
         println!("{}: {}", args[i], args[i + 1]);
         let guess = encode_word(&args[i]);
-        let score = cli_score(&guess, &args[i + 1]);
+        let score = cli_score(&args[i + 1]);
         nw = next_words(&nw, &score, &guess);
         let suggested = rankguesses(&nw, &nw)[0].0;
         println!{"-> bot move: {}", decode_word(&suggested)};
@@ -238,13 +241,13 @@ fn run_solve(words: &[Word], args: &[String]) {
     let word = args[0].as_str();
     let guess = args[1].as_str();
     println!("solve mode: word={}, guess={}", word, guess);
-    solve(&words, &encode_word(word), &encode_word(guess));
+    solve(words, &encode_word(word), &encode_word(guess));
 }
 
 fn run_calculate(words: &[Word], _args: &[String]) {
-    let candidates = determine_candidates(&words);
+    let candidates = determine_candidates(words);
     eprintln!("candidates: {} of {} total words", candidates.len(), words.len());
-    let ranked = rankguesses(&candidates, &words);
+    let ranked = rankguesses(&candidates, words);
     eprintln!("best word is: {}", decode_word(&ranked[0].0));
     println!("word,average_ratio");
     for (w, r) in ranked.iter() {
@@ -252,18 +255,104 @@ fn run_calculate(words: &[Word], _args: &[String]) {
     }
 }
 
-fn test() {
-    let word = encode_word("crank");
-    let guess = encode_word("raise");
-    let candidate = encode_word("rayon");
+#[cfg(test)]
+mod tests {
 
-    let ex = CharCount { count: [0; 26] };
-    let score = mark_guess(&word, &guess);
+    fn next_is_valid(word: &str, guess: &str, next: &str) -> bool {
+        let word = super::encode_word(word);
+        let guess = super::encode_word(guess);
+        let candidate = super::encode_word(next);
+        let score = super::mark_guess(&word, &guess);
+        let ex = super::determine_excluded(&guess, &score);
+        super::word_valid(&guess, &candidate, &ex, &score)
+    }
 
-    println!("{:?}", score);
-    println!("{:?}", word_valid(&guess, &candidate, &ex, &score));
-    return;
+    #[test]
+    fn fail_yellow_again() {
+        assert_eq!(next_is_valid(
+            "abcde",
+            "bwxyz",
+            "bhijk"), false);
+    }
+    
+    #[test]
+    fn fail_reuse_excluded() {
+        assert_eq!(next_is_valid(
+            "abcde",
+            "jklmn",
+            "juvwx"), false);
+    }
+
+    #[test]
+    fn fail_yellow_impossible() {
+        assert_eq!(next_is_valid(
+            "abcde",
+            "bwxyz",
+            "hijkl"), false);
+    }
+
+    #[test]
+    fn suceed_green() {
+        assert_eq!(next_is_valid(
+            "abcde",
+            "abhij",
+            "abklm"), true);
+    }
+
+    #[test]
+    fn suceed_allgreen() {
+        assert_eq!(next_is_valid(
+            "abcde",
+            "abcde",
+            "abcde"), true);
+    }
+
+    #[test]
+    fn suceed_allyellow() {
+        assert_eq!(next_is_valid(
+            "abcde",
+            "edcba",
+            "abcde"), true);
+    }
+
+    #[test]
+    fn suceed_yellow_swap() {
+        assert_eq!(next_is_valid(
+            "abcde",
+            "bahij",
+            "abklm"), true);
+    }
+
+    #[test]
+    fn suceed_twoyellow_swap() {
+        assert_eq!(next_is_valid(
+            "aabcd",
+            "hiaaj",
+            "aaklm"), true);
+    }
+
+    #[test]
+    fn suceed_twoyellow_shift() {
+        assert_eq!(next_is_valid(
+            "aabcd",
+            "hiaaj",
+            "amkla"), true);
+    }
+
+    #[test]
+    fn fail_twoyellow_less() {
+        assert_eq!(next_is_valid(
+            "aabcd",
+            "hiaaj",
+            "amklp"), false);
+    }
 }
+
+/*
+fn test() {
+
+}
+*/
 
 fn main() {
     let args: Vec<String> = env::args().collect();
